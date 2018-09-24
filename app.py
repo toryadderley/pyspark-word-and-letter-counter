@@ -43,7 +43,7 @@ word_counts = word_pairs.reduceByKey(lambda a, b: a + b)
 letters_collect = letter_counts.collect()
 sorted_letter_counts = sorted(letters_collect)
 words_collect = word_counts.collect()
-sorted_word_counts = sorted(words_collect, key=getKey)  # Need to fix
+sorted_word_counts = sorted(words_collect, key=getKey)
 
 # Save to output text files in the directory
 word_counts.saveAsTextFile("words-ouput")
@@ -52,7 +52,7 @@ letter_counts.saveAsTextFile("letters-output")
 # Save to output csv files in the directory
 words_csv = open("words-output.csv", "w")
 writer = csv.writer(words_csv, dialect="excel")
-writer.writerows(words_collect)
+writer.writerows(sorted_word_counts)
 words_csv.close()
 
 letters_csv = open("letters-output.csv", "w")
