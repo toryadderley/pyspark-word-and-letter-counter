@@ -4,6 +4,16 @@ import re
 
 from pyspark import SparkConf, SparkContext
 
+
+# Helper Function
+def getKey(item):
+    return item[0]
+
+
+################
+# MAIN PROGRAM #
+################
+
 # Create a SparkContext object with Spark configuration
 conf = SparkConf().setAppName("Word-Letter-Counter")
 sc = SparkContext(conf=conf)
@@ -12,11 +22,13 @@ sc = SparkContext(conf=conf)
 lines = sc.textFile(sys.argv[1]).cache()
 
 # Splits lines in the text file into separate strings of words, containing only alphabetic characters
-words = lines.flatMap(lambda line: re.split('[^a-zA-Z]', line))
+# Makes the all charaters lower case
+words = lines.flatMap(lambda line: re.split('[^a-zA-Z]', line)) \
+    .map(lambda word: word.lower())
 
-# Filters for non alphabetic characters, makes the first letter of all the words lower cased
+# Filters for non alphabetic characters, returns the first letter of every word
 letters = words.filter(lambda letter: letter.isalpha()) \
-    .map(lambda word: word[0].lower())
+    .map(lambda word: word[0])
 
 # Read input and produces a set of key-value pairs
 # And groups every pair with the same key
@@ -27,9 +39,11 @@ word_pairs = words.map(lambda word: (word, 1))
 letter_counts = letter_pairs.reduceByKey(lambda a, b: a + b)
 word_counts = word_pairs.reduceByKey(lambda a, b: a + b)
 
-# Makes a collection of all the occurances of each word and letter
+# Makes a sorted list of the occurances of each word and letter
 letters_collect = letter_counts.collect()
+sorted_letter_counts = sorted(letters_collect)
 words_collect = word_counts.collect()
+sorted_word_counts = sorted(words_collect, key=getKey)  # Need to fix
 
 # Save to output text files in the directory
 word_counts.saveAsTextFile("words-ouput")
@@ -43,7 +57,7 @@ words_csv.close()
 
 letters_csv = open("letters-output.csv", "w")
 writer = csv.writer(letters_csv, dialect="excel")
-writer.writerows(letters_collect)
+writer.writerows(sorted_letter_counts)
 letters_csv.close()
 
 # End Spark context
