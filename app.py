@@ -5,7 +5,7 @@ import re
 from pyspark import SparkConf, SparkContext
 
 
-# Helper Function
+# Helper method
 def getKey(item):
     return item[0]
 
@@ -24,6 +24,7 @@ lines = sc.textFile(sys.argv[1]).cache()
 # Splits lines in the text file into separate strings of words, containing only alphabetic characters
 # Makes the all charaters lower case
 words = lines.flatMap(lambda line: re.split('[^a-zA-Z]', line)) \
+    .filter(lambda letter: letter.isalpha()) \
     .map(lambda word: word.lower())
 
 # Filters for non alphabetic characters, returns the first letter of every word
