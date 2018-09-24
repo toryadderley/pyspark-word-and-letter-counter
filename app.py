@@ -1,36 +1,39 @@
-
 import sys
 import csv
+import re
 
 from pyspark import SparkConf, SparkContext
 
-# create Spark context with Spark configuration
-sc = SparkContext("local", "Pyspark App")
+# Create a SparkContext object with Spark configuration
+conf = SparkConf().setAppName("Word-Letter-Counter")
+sc = SparkContext(conf=conf)
 
-# read text file
+# Read input text file
 lines = sc.textFile(sys.argv[1]).cache()
 
-# split each word in the text file
-words = lines.flatMap(lambda line: line.split(" "))
+# Splits lines in the text file into separate strings of words, containing only alphabetic characters
+words = lines.flatMap(lambda line: re.split('[^a-zA-Z]', line))
 
-# split each word
-letters = lines.flatMap(lambda line: line.split(" "))
+# Filters for non alphabetic characters, makes the first letter of all the words lower cased
 letters = words.filter(lambda letter: letter.isalpha()) \
-             .map(lambda word: word[0].lower())
+    .map(lambda word: word[0].lower())
 
-# count occurance of each letter
+# Read input and produces a set of key-value pairs
+# And groups every pair with the same key
 letter_pairs = letters.map(lambda letter: (letter, 1))
-letter_counts = letter_pairs.reduceByKey(lambda a, b: a + b)
-letters_collect = letter_counts.collect()
+word_pairs = words.map(lambda word: (word, 1))
 
-# count occurance of each word
-pairs = words.map(lambda word: (word, 1))
-word_counts = pairs.reduceByKey(lambda a, b: a + b)
+# Sums every value with the same key and outputs total amount of values for a single key
+letter_counts = letter_pairs.reduceByKey(lambda a, b: a + b)
+word_counts = word_pairs.reduceByKey(lambda a, b: a + b)
+
+# Makes a collection of all the occurances of each word and letter
+letters_collect = letter_counts.collect()
 words_collect = word_counts.collect()
 
 # Save to output text files in the directory
-word_counts.saveAsTextFile("words-counts");
-letter_counts.saveAsTextFile("letters-counts");
+word_counts.saveAsTextFile("words-ouput")
+letter_counts.saveAsTextFile("letters-output")
 
 # Save to output csv files in the directory
 words_csv = open("words-output.csv", "w")
@@ -43,7 +46,5 @@ writer = csv.writer(letters_csv, dialect="excel")
 writer.writerows(letters_collect)
 letters_csv.close()
 
-# end Spark context
+# End Spark context
 sc.stop()
-
-
