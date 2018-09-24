@@ -4,10 +4,21 @@ import re
 
 from pyspark import SparkConf, SparkContext
 
+####################
+# HELPER FUNCTIONS #
+####################
 
-# Helper method
-def getKey(item):
-    return item[0]
+# Sort words by first character
+def getKey(word):
+    return word[0]
+
+
+# Create csv file
+def createCSV(obj, filename):
+    file = open(filename + ".csv", "w")
+    writer = csv.writer(file, dialect="excel")
+    writer.writerows(obj)
+    file.close()
 
 
 ################
@@ -18,18 +29,25 @@ def getKey(item):
 conf = SparkConf().setAppName("Word-Letter-Counter")
 sc = SparkContext(conf=conf)
 
-# Read input text file
-lines = sc.textFile(sys.argv[1]).cache()
+# Load data from raw text file into RDD
+filename = sys.argv[1]
+lines = sc.textFile(filename).cache()
 
-# Splits lines in the text file into separate strings of words, containing only alphabetic characters
-# Makes the all charaters lower case
-words = lines.flatMap(lambda line: re.split('[^a-zA-Z]', line)) \
-    .filter(lambda letter: letter.isalpha()) \
+
+""""
+Splits lines in the text file into separate strings of words,
+containing only alphabetic characters.
+Makes all charaters lower case.
+"""
+words = (
+    lines.flatMap(lambda line: re.split("[^a-zA-Z]", line))
+    .filter(lambda letter: letter.isalpha())
     .map(lambda word: word.lower())
+)
+
 
 # Filters for non alphabetic characters, returns the first letter of every word
-letters = words.filter(lambda letter: letter.isalpha()) \
-    .map(lambda word: word[0])
+letters = words.filter(lambda letter: letter.isalpha()).map(lambda word: word[0])
 
 # Read input and produces a set of key-value pairs
 # And groups every pair with the same key
@@ -51,15 +69,8 @@ word_counts.saveAsTextFile("words-ouput")
 letter_counts.saveAsTextFile("letters-output")
 
 # Save to output csv files in the directory
-words_csv = open("words-output.csv", "w")
-writer = csv.writer(words_csv, dialect="excel")
-writer.writerows(sorted_word_counts)
-words_csv.close()
-
-letters_csv = open("letters-output.csv", "w")
-writer = csv.writer(letters_csv, dialect="excel")
-writer.writerows(sorted_letter_counts)
-letters_csv.close()
+createCSV(sorted_letter_counts, "letters_output")
+createCSV(sorted_word_counts, "words_output")
 
 # End Spark context
 sc.stop()
