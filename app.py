@@ -8,13 +8,16 @@ from pyspark import SparkConf, SparkContext
 # HELPER FUNCTIONS #
 ####################
 
-# Sort words by first character
 def getKey(word):
+    """
+    Used to sort words by first character
+    """
     return word[0]
 
-
-# Create csv file
 def createCSV(obj, filename):
+    """
+    Create csv file from data
+    """
     file = open(filename + ".csv", "w")
     writer = csv.writer(file, dialect="excel")
     writer.writerows(obj)
@@ -34,27 +37,24 @@ filename = sys.argv[1]
 lines = sc.textFile(filename).cache()
 
 
-""""
-Splits lines in the text file into separate strings of words,
-containing only alphabetic characters.
-Makes all charaters lower case.
-"""
+# Splits lines in the text file into separate strings of words.
+# Filters out non alphabetic characters.
+# Makes all alphabetic characters lower case.
 words = (
     lines.flatMap(lambda line: re.split("[^a-zA-Z]", line))
     .filter(lambda letter: letter.isalpha())
     .map(lambda word: word.lower())
 )
 
-
+ 
 # Filters for non alphabetic characters, returns the first letter of every word
-letters = words.filter(lambda letter: letter.isalpha()).map(lambda word: word[0])
+letters = words.map(lambda word: word[0])
 
-# Read input and produces a set of key-value pairs
-# And groups every pair with the same key
+# Read input and produces a sets of key-value pairs of (letter, 1) and (word, 1)
 letter_pairs = letters.map(lambda letter: (letter, 1))
 word_pairs = words.map(lambda word: (word, 1))
 
-# Sums every value with the same key and outputs total amount of values for a single key
+# Sums every value with the same key to gain the total occurances for each word and letter
 letter_counts = letter_pairs.reduceByKey(lambda a, b: a + b)
 word_counts = word_pairs.reduceByKey(lambda a, b: a + b)
 
